@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medicine Billing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+            color: #333;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Generate QR and PDF Receipt</h1>
+        <form action="/generate_qr" method="post">
+            <div class="form-group">
+                <label for="customer_name">Customer Name:</label>
+                <input type="text" id="customer_name" name="customer_name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="aadhar_number">Aadhar Number:</label>
+                <input type="text" id="aadhar_number" name="aadhar_number" required>
+            </div>
+
+            <div class="form-group">
+                <label for="destination">Destination Address:</label>
+                <input type="text" id="destination" name="destination" required>
+            </div>
+
+            <div class="form-group">
+                <label for="qr_code">QR Code Data:</label>
+                <input type="text" id="qr_code" name="qr_code" required>
+            </div>
+
+            <div class="form-group">
+                <label for="medicines">Medicines (Comma Separated):</label>
+                <input type="text" id="medicines" name="medicines" required>
+            </div>
+
+            <input type="submit" value="Generate QR and PDF">
+        </form>
+    </div>
+</body>
+</html>
