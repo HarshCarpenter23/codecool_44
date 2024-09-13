@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, json, send_file
+from flask import Flask, request, render_template, json, send_file, jsonify
 import random
 import smtplib
 import qrcode
@@ -14,6 +14,7 @@ import base64
 import hashlib
 import mysql.connector
 from mysql.connector import Error
+import uuid
 
 app = Flask(__name__)
 
@@ -64,7 +65,7 @@ def encrypt_data(data, aadhaar):
 def decrypt_data(encrypted_data, aadhaar):
     encrypted_data = base64.b64decode(encrypted_data)
     key = hashlib.sha256(aadhaar.encode()).digest()
-    iv = encrypted_data[:16]  # Extract the IV from the first 16 bytes
+    iv = encrypted_data[:16]  
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     decryptor = cipher.decryptor()
     decrypted_data = decryptor.update(encrypted_data[16:]) + decryptor.finalize()
@@ -185,7 +186,6 @@ def generate_receipt():
         print(f"Error occurred: {str(e)}")
         return f"An error occurred: {str(e)}"
 
-
 @app.route('/generate_otp', methods=['POST'])
 def generate_otp():
     qr_code = request.form['qr_code']
@@ -225,10 +225,86 @@ def verify_otp():
             return f"OTP verification failed for QR Code: {qr_code}"
     except Exception as e:
         return f"An error occurred: {str(e)}"
+    
+@app.route('/add_order', methods=['POST'])
+def add_order():
+    try:
+        data = request.json
+        pharmacy_id = data['pharmacyId']
+        pharmacy_name = data['pharmacyName']
+        order_date = data['orderDate']
+        expected_delivery_date = data['expectedDeliveryDate']
+        medicine_info = data['medicineInfo']
+        special_instructions = data.get('specialInstructions', '')
+
+        # Generate unique identifiers
+        order_id = str(uuid.uuid4())
+
+        # TODO: Generate QR code and PDF here
+
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='dist',
+            user='root',
+            password=''
+        )
+
+        if connection.is_connected():
+            cursor = connection.cursor()
+
+            # Create table if it doesn't exist
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS pharmacy_orders (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    order_id VARCHAR(36),
+                    pharmacy_id VARCHAR(50),
+                    pharmacy_name VARCHAR(100),
+                    order_date DATE,
+                    expected_delivery_date DATE,
+                    medicine_info JSON,
+                    special_instructions TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Convert medicine_info to JSON string
+            medicine_info_json = json.dumps(medicine_info)
+
+            # Insert data into the table
+            insert_query = """
+                INSERT INTO pharmacy_orders 
+                (order_id, pharmacy_id, pharmacy_name, order_date, expected_delivery_date, 
+                medicine_info, special_instructions) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            record = (order_id, pharmacy_id, pharmacy_name, order_date, expected_delivery_date,
+                      medicine_info_json, special_instructions)
+            cursor.execute(insert_query, record)
+            connection.commit()
+            print("Record inserted successfully into pharmacy_orders table")
+
+            return jsonify({
+                "message": "Order submitted successfully",
+                "order_id": order_id
+            }), 200
+
+    except Error as e:
+        print(f"Error while connecting to MySQL: {e}")
+        return jsonify({"error": str(e)}), 500
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if 'connection' in locals() and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("MySQL connection is closed")
 
 if __name__ == '__main__':
     os.makedirs('static/qr_codes', exist_ok=True)
     os.makedirs('static/receipts', exist_ok=True)
     app.run(debug=True)
 
-def generate_otp():
+
