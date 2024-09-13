@@ -12,6 +12,8 @@ from cryptography.hazmat.primitives import padding
 from flask_cors import CORS
 import base64
 import hashlib
+import mysql.connector
+from mysql.connector import Error
 
 app = Flask(__name__)
 
@@ -22,8 +24,8 @@ ganache_url = "HTTP://127.0.0.1:8545"
 web3 = Web3(Web3.HTTPProvider(ganache_url))
 
 # Contract ABI and address
-contract_address = "0xa1bA6b4Edbc60B0Df96Df1E46C059CD67fb53d8f"
-file_path = r'C:\medInv\backend\build\contracts\MedicineSupply.json'
+contract_address = "0xB33A5c52970D1fA625B5412499f2145d6F375ad9"
+file_path = r'D:\dist\backend\build\contracts\MedicineSupply.json '
 with open(file_path) as f:
     contract_json = json.load(f)
     contract_abi = contract_json['abi']
@@ -93,21 +95,21 @@ def generate_receipt():
 
     try:
         # Step 1: Encrypt QR Code Data
-        qr_code_data = f"Medicine: {medicine_info}, Aadhaar: {customer_aadhaar}"
+        qr_code_data = f"Medicine: {json.dumps(medicine_info)}, Aadhaar: {customer_aadhaar}"
         encrypted_qr_data = encrypt_data(qr_code_data, customer_aadhaar)
 
         # Step 2: Generate and Save QR Code
         img = qrcode.make(encrypted_qr_data)
         qr_image_path = f'static/qr_codes/{customer_aadhaar}_qr.png'
         img.save(qr_image_path)
-        print(f"QR code saved at {qr_image_path}")  # Debug log for QR code path
+        print(f"QR code saved at {qr_image_path}")
 
         # Step 3: Deploy shipment on blockchain
         tx_hash = contract.functions.createShipment(encrypted_qr_data, destination_address, customer_aadhaar).transact({
             'from': web3.eth.accounts[0]
         })
         receipt = wait_for_transaction_receipt(tx_hash)
-        print(f"Transaction hash: {tx_hash}")  # Debug log for transaction hash
+        print(f"Transaction hash: {tx_hash.hex()}")
 
         # Step 4: Generate PDF Receipt
         pdf = FPDF()
@@ -116,40 +118,72 @@ def generate_receipt():
         pdf.cell(200, 10, txt="Medicine Receipt", ln=True, align='C')
         pdf.ln(10)
         pdf.cell(200, 10, txt=f"Customer Aadhaar: {customer_aadhaar}", ln=True)
-        pdf.cell(200, 10, txt=f"Medicine Info: {medicine_info}", ln=True)
+        pdf.cell(200, 10, txt="Medicine Info:", ln=True)
+        for item in medicine_info:
+            pdf.cell(200, 10, txt=f"  - {item['name']}: Quantity: {item['quantity']}, Price: {item['price']}", ln=True)
         pdf.cell(200, 10, txt=f"Destination Address: {destination_address}", ln=True)
 
         # Add QR Code to PDF
-        pdf.image(qr_image_path, x=10, y=60, w=50)
+        pdf.image(qr_image_path, x=10, y=100, w=50)
         
-        # Corrected path to save the PDF
         pdf_output_path = f'static/receipts/{customer_aadhaar}_receipt.pdf'
+        pdf.output(pdf_output_path)
+        print(f"PDF saved successfully at {pdf_output_path}")
 
+        # Step 5: Add data to MySQL database
         try:
-            pdf.output(pdf_output_path)  # Correct file save
-            print(f"PDF saved successfully at {pdf_output_path}")  # Debug log for PDF path
-        except Exception as e:
-            print(f"Error saving PDF: {str(e)}")
-        
-        # Saving the PDF
-        pdf_output_success = pdf.output(pdf_output_path)
-        print(f"PDF saved successfully at {pdf_output_path}")  # Debug log for PDF path
+            connection = mysql.connector.connect(
+                host='localhost',
+                database='dist',
+                user='root',
+                password=''
+            )
 
-        # Check if the PDF file is successfully saved
-        if not pdf_output_success:
-            raise Exception("Failed to generate the PDF")
+            if connection.is_connected():
+                cursor = connection.cursor()
 
-        # Step 5: Send PDF file to the user
-        try:
-            return send_file(pdf_output_path, as_attachment=True, download_name=f"{customer_aadhaar}_receipt.pdf", mimetype='application/pdf')
-        except Exception as e:
-            print(f"Error sending PDF file: {str(e)}")
-            return f"An error occurred while sending the PDF: {str(e)}"
+                # Create table if it doesn't exist
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS receipts (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        customer_aadhaar VARCHAR(12),
+                        medicine_info JSON,
+                        destination_address TEXT,
+                        qr_image_path VARCHAR(255),
+                        pdf_path VARCHAR(255),
+                        transaction_hash VARCHAR(66),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+
+                # Convert medicine_info to JSON string
+                medicine_info_json = json.dumps(medicine_info)
+
+                # Insert data into the table
+                insert_query = """
+                    INSERT INTO receipts 
+                    (customer_aadhaar, medicine_info, destination_address, qr_image_path, pdf_path, transaction_hash) 
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                record = (customer_aadhaar, medicine_info_json, destination_address, qr_image_path, pdf_output_path, tx_hash.hex())
+                cursor.execute(insert_query, record)
+                connection.commit()
+                print("Record inserted successfully into receipts table")
+
+        except Error as e:
+            print(f"Error while connecting to MySQL: {e}")
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+                print("MySQL connection is closed")
+
+        # Step 6: Send PDF file to the user
+        return send_file(pdf_output_path, as_attachment=True, download_name=f"{customer_aadhaar}_receipt.pdf", mimetype='application/pdf')
 
     except Exception as e:
-        print(f"Error occurred: {str(e)}")  # Logging error
+        print(f"Error occurred: {str(e)}")
         return f"An error occurred: {str(e)}"
-
 
 
 @app.route('/generate_otp', methods=['POST'])
