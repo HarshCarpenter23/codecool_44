@@ -230,3 +230,5 @@ if __name__ == '__main__':
     os.makedirs('static/qr_codes', exist_ok=True)
     os.makedirs('static/receipts', exist_ok=True)
     app.run(debug=True)
+
+def generate_otp():
