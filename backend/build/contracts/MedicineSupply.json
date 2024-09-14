@@ -9763,12 +9763,12 @@
     "1726221330716": {
       "events": {},
       "links": {},
-      "address": "0xB33A5c52970D1fA625B5412499f2145d6F375ad9",
-      "transactionHash": "0x55f1dee8f1362d8558e76ee59ef9dce69afb1f2f9f13dc604af7e5445c0491cb"
+      "address": "0xCFc2C14585319Ee3BdCec79bEA417B290DA4e8fD",
+      "transactionHash": "0x6a93ea83111c17bb56e37672996d139d53a806e4b6ed79aca8f8c3c806bb0e1a"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2024-09-13T09:56:55.907Z",
+  "updatedAt": "2024-09-14T03:02:37.782Z",
   "networkType": "ethereum",
   "devdoc": {
     "methods": {}

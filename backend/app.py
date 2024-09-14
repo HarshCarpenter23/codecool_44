@@ -25,7 +25,7 @@ ganache_url = "HTTP://127.0.0.1:8545"
 web3 = Web3(Web3.HTTPProvider(ganache_url))
 
 # Contract ABI and address
-contract_address = "0xB33A5c52970D1fA625B5412499f2145d6F375ad9"
+contract_address = "0xCFc2C14585319Ee3BdCec79bEA417B290DA4e8fD"
 file_path = r'D:\dist\backend\build\contracts\MedicineSupply.json '
 with open(file_path) as f:
     contract_json = json.load(f)
@@ -96,7 +96,7 @@ def generate_receipt():
 
     try:
         # Step 1: Encrypt QR Code Data
-        qr_code_data = f"Medicine: {json.dumps(medicine_info)}, Aadhaar: {customer_aadhaar}"
+        qr_code_data = f"Medicine: {json.dumps(medicine_info)}, PAN: {customer_aadhaar}"
         encrypted_qr_data = encrypt_data(qr_code_data, customer_aadhaar)
 
         # Step 2: Generate and Save QR Code
@@ -118,7 +118,7 @@ def generate_receipt():
         pdf.set_font('Arial', 'B', 12)
         pdf.cell(200, 10, txt="Medicine Receipt", ln=True, align='C')
         pdf.ln(10)
-        pdf.cell(200, 10, txt=f"Customer Aadhaar: {customer_aadhaar}", ln=True)
+        pdf.cell(200, 10, txt=f"Pharmacy PAN CARD: {customer_aadhaar}", ln=True)
         pdf.cell(200, 10, txt="Medicine Info:", ln=True)
         for item in medicine_info:
             pdf.cell(200, 10, txt=f"  - {item['name']}: Quantity: {item['quantity']}, Price: {item['price']}", ln=True)
